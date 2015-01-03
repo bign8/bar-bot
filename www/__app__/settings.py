@@ -36,6 +36,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'api',
+    'www'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -48,9 +50,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'www.urls'
+ROOT_URLCONF = '__app__.urls'
 
-WSGI_APPLICATION = 'www.wsgi.application'
+WSGI_APPLICATION = '__app__.wsgi.application'
 
 
 # Database
