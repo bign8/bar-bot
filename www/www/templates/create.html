@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="page-header" id="banner">
+        <div class="row">
+            <h1>Bar Bot</h1>
+            <p class="lead">The drink mixing robot</p>
+        </div>
+    </div>
+
+    <div class="bs-docs-section">
+
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-header">
+                    <h1>Build your drink</h1>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="list-group list-categories">
+                    {% for category in categories %}
+                    <a href="#" data-catid="{{ category.id }}" class="list-group-item{% if forloop.first %} active{% endif %}">
+                        <span class="badge">{{ category.num_children }}</span>
+                        {{ category.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-lg-4">
+                {% for category in categories %}
+                <div class="list-group list-items{% if not forloop.first %} hide{% endif %}" data-catid="{{ category.id }}">
+                    {% for ingredient in category.children %}
+                    <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}">
+                        <img class="pull-left" width="64" src="{{ ingredient.logo.url }}" />
+                        <h5 class="list-group-item-heading">{{ ingredient.name }}</h5>
+                        <p class="list-group-item-text">{{ ingredient.phrase }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="col-lg-5">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Ingredients</div>
+                    <div class="panel-body">
+                        Graphic goes here
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
