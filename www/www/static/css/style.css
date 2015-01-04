@@ -1,0 +1,5 @@
+/* demo style */
+.disabled img{opacity:0.4}
+.list-categories a{text-transform:uppercase}
+.list-items a img{padding-right: 10px}
+.list-items h5{text-transform:uppercase}
