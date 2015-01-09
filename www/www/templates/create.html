@@ -38,6 +38,13 @@
                         <p class="list-group-item-text">{{ ingredient.phrase }}</p>
                     </a>
                     {% endfor %}
+                    {% if not category.children %}
+                    <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}">
+                        <img class="pull-left" width="64" src="/media/ingredients/none.png" style="margin-top:-4px" />
+                        <h5 class="list-group-item-heading">None Available</h5>
+                        <p class="list-group-item-text">Sorry, but this category is empty</p>
+                    </a>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
