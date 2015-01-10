@@ -3,9 +3,12 @@
 {% block content %}
     <div class="row">
         <div class="col-sm-6 col-sm-offset-3">
-            <p>{% trans "Thanks for spending some quality time with the Web site today." %}</p>
+            <div class="well">
+                <p>Thanks for spending some quality time with us today.</p>
 
-            <p><a href="{% url 'auth:login' %}">{% trans 'Log in again' %}</a></p>
+                <a href="{% url 'account:login' %}" class="btn btn-primary">Log in again</a>
+                <a href="{% url 'www:home' %}" class="btn btn-default pull-right">Back to site</a>
+            </div>
         </div>
     </div>
 

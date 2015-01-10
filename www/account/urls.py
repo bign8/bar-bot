@@ -9,14 +9,14 @@ urlpatterns = patterns('',
         },
         name='login'
     ),
-    # url(
-    #     r'^logout/$',
-    #     'django.contrib.auth.views.logout',
-    #     {
-    #         'template_name': 'account/logged_out.html'
-    #     },
-    #     name='logout'
-    # ),
+    url(
+        r'^logout/$',
+        'django.contrib.auth.views.logout',
+        {
+            'template_name': 'account/logged_out.html'
+        },
+        name='logout'
+    ),
     # url(
     #     r'^password_change/$',
     #     'django.contrib.auth.views.password_change',
