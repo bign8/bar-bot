@@ -4,7 +4,7 @@ body>.navbar-transparent{background-color:transparent}
 body>.navbar-transparent .navbar-nav>.open>a{background-color:transparent !important}
 #banner{/*min-height:300px;*/border-bottom:none}
 .page-header h1{font-size:4em}
-.bs-docs-section{margin-top:8em}
+.section,.bs-docs-section{margin-top:8em}
 .bs-component{position:relative}
 .bs-component .modal{position:relative;top:auto;right:auto;left:auto;bottom:auto;z-index:1;display:block}
 .bs-component .modal-dialog{width:90%}
