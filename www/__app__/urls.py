@@ -4,6 +4,6 @@ from django.contrib import admin
 urlpatterns = patterns('',
     url(r'^api/', include('api.urls', namespace='api')),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^accounts/', include('django.contrib.auth.urls')),
+    url(r'^account/', include('account.urls', namespace='account')),
     url(r'^', include('www.urls', namespace='www')),
 )
