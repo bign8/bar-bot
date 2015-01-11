@@ -15,6 +15,7 @@ class Ingredient(models.Model):
 
 class Category(models.Model):
     name = models.CharField(max_length=40)
+    slug = models.SlugField()
 
     @property
     def num_children(self):
