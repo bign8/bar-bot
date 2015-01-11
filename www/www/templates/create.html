@@ -26,16 +26,28 @@
                 <div class="list-group list-items{% if not forloop.first %} hide{% endif %}" data-catid="{{ category.id }}">
                     {% for ingredient in category.children %}
                     <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}">
-                        <img class="pull-left" width="64" src="{{ ingredient.logo.url }}" />
-                        <h5 class="list-group-item-heading">{{ ingredient.name }}</h5>
-                        <p class="list-group-item-text">{{ ingredient.phrase }}</p>
+                        <div class="media">
+                            <span class="media-left media-middle ingredient-logo">
+                                <img src="{{ ingredient.logo.url }}" />
+                            </span>
+                            <div class="media-body">
+                                <h5 class="media-heading">{{ ingredient.name }}</h5>
+                                {{ ingredient.phrase }}
+                            </div>
+                        </div>
                     </a>
                     {% endfor %}
                     {% if not category.children %}
                     <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}">
-                        <img class="pull-left" width="64" src="/media/ingredients/none.png" style="margin-top:-4px" />
-                        <h5 class="list-group-item-heading">None Available</h5>
-                        <p class="list-group-item-text">Sorry, but this category is empty</p>
+                        <div class="media">
+                            <span class="media-left media-meddle ingredient-logo">
+                                <img src="/media/ingredients/none.png" />
+                            </span>
+                            <div class="media-body">
+                                <h5 class="media-heading">None Available</h5>
+                                Sorry, but this category is empty
+                            </div>
+                        </div>
                     </a>
                     {% endif %}
                 </div>
