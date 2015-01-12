@@ -71,6 +71,9 @@
                 <ul class="nav navbar-nav navbar-right">
                     {% if user.is_authenticated %}
                         <li><a href="#">{{ user.get_short_name }}</a></li>
+                        {% if user.is_staff %}
+                            <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                        {% endif %}
                         <li><a href="{% url 'account:logout' %}">Logout</a></li>
                     {% else %}
                         <li><a href="{% url 'account:login' %}">Login</a></li>
