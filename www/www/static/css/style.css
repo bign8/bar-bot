@@ -4,3 +4,11 @@
 .list-items h5{text-transform:uppercase}
 .ingredient-logo{width:64px;text-align:center}
 .ingredient-logo img{max-width:64px;max-height:50px}
+.drink{
+    width: 300px;
+    height: 400px;
+    /*border: 1px solid black;*/
+    display: block;
+    margin: 0 auto;
+    font-size: 10px;
+}

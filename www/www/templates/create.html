@@ -1,4 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load staticfiles %}
+
+{% block scripts %}
+    <script src="{% static 'js/snap.svg-min.js' %}"></script>
+    <script src="{% static 'js/create/mixer.svg.js' %}"></script>
+    <script src="{% static 'js/create/create.js' %}"></script>
+{% endblock %}
 
 {% block content %}
     <div class="section">
@@ -56,9 +62,7 @@
             <div class="col-lg-5">
                 <div class="panel panel-default">
                     <div class="panel-heading">Ingredients</div>
-                    <div class="panel-body">
-                        Graphic goes here
-                    </div>
+                    <div id="mixer" class="panel-body"></div>
                 </div>
             </div>
         </div>
