@@ -39,4 +39,4 @@ function draw_portion(begin, percent, color, title) {
 }
 var x = draw_portion(0.00, 0.20, '#ff0000', 'first');
 draw_portion(0.20, 0.20, '#00ff00', 'second');
-draw_portion(0.40, 0.60, '#0000ff', 'third');
+draw_portion(0.40, 0.60, '#5959ff', 'third');

@@ -2,6 +2,7 @@
 
 {% block scripts %}
     <script src="{% static 'js/snap.svg-min.js' %}"></script>
+    <script src="{% static 'js/create/models.js' %}"></script>
     <script src="{% static 'js/create/mixer.svg.js' %}"></script>
     <script src="{% static 'js/create/create.js' %}"></script>
 {% endblock %}
@@ -31,7 +32,7 @@
                 {% for category in categories %}
                 <div class="list-group list-items{% if not forloop.first %} hide{% endif %}" data-catid="{{ category.id }}">
                     {% for ingredient in category.children %}
-                    <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}">
+                    <a href="#" class="list-group-item{% if not ingredient.enabled %} disabled{% endif %}" data-ing-id="{{ ingredient.id }}">
                         <div class="media">
                             <span class="media-left media-middle ingredient-logo">
                                 <img src="{{ ingredient.logo.url }}" />
