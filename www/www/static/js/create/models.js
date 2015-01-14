@@ -48,6 +48,7 @@ var Recipe = function(name) {
     this.name = name || 'Name your drink'; // recipe name
     this.amounts = []; // values
     this.trash = {}; // ingredient.id -> deleted amount.id mapping
+    this.listeners = [];
 };
 Recipe.prototype = {
     index: function(ingredient) {
@@ -83,6 +84,7 @@ Recipe.prototype = {
             value
         );
         this.amounts.push(amount);
+        this.update();
 
         return amount;
     },
@@ -95,17 +97,20 @@ Recipe.prototype = {
             return this.rem(ingredient);
         var idx = this.find(ingredient);
         this.amounts[idx].set(value);
+        this.update();
     },
     rem: function(ingredient) {
         var idx = this.find(ingredient);
         this.trash[ingredient.id] = this.amounts[idx].id;
         delete this.amounts[idx];
+        this.update();
     },
     mod: function(ingredient, delta) {
         var idx = this.find(ingredient);
         this.amounts[idx].mod(delta);
         if (this.amounts[idx].amount <= 0)
-            this.rem(ingredient);
+            return this.rem(ingredient);
+        this.update();
     },
     toObj: function() {
         return {
@@ -117,8 +122,28 @@ Recipe.prototype = {
     },
     toJSON: function() {
         return JSON.stringify(this.toObj());
+    },
+    register: function(cb) {
+        this.listeners.push(cb);
+    },
+    update: function() {
+        // TODO: frame delay this call
+        for (var i = 0; i < this.listeners.length; i++)
+            this.listeners[i]();
     }
 };
 Recipe.fromJSON = function(json) {
     // TODO
+};
+
+// VIEWS
+
+var RecipeController = function (recipe) {
+    this.recipe = recipe;
+    recipe.register(this.update);
+} ;
+RecipeController.prototype = {
+    update: function() {
+        console.log('updated');
+    }
 };
