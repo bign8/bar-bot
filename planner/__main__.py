@@ -3,6 +3,7 @@ Drink Units: fluid ounces
 """
 
 import math
+import heapq
 from itertools import chain, combinations
 
 # http://stackoverflow.com/a/1482316/3220865
@@ -13,11 +14,17 @@ def powerset(iterable):
 
 PI = math.pi
 TAU = 2 * math.pi
-R = 25 / 2 # 25" in diameter
+R = 25.0 / 2 # 25" in diameter
 R_SPOUT = 0.25 / 2
-R_CUP = 4 / 2
-N_cups = 1
-DR = TAU / (3 * 8) # making things easy
+R_CUP = 4.0 / 2
+N_cups = 3
+DR = TAU / (3 * 10) # making things easy
+
+# TODO: simplify math because of radius divisions and such
+# https://en.wikipedia.org/wiki/Circular_segment
+cup_theta = 2 * math.asin(R_CUP / (R * 2))
+spout_theta = 2 * math.asin(R_SPOUT / (R * 2))
+dt = cup_theta - spout_theta
 
 # TODO: parse all this from environment
 spouts = {
@@ -49,10 +56,17 @@ def intersect(my_angle, cup_angle):
 
     dx, dy, dr = (cos(a1) - cos(a2)) * r, (sin(a1) - sin(a2)) * r, r2 - r1
     p = dx * dx + dy * dy < dr * dr
-    """
+
     dx = (math.cos(my_angle) - math.cos(cup_angle)) * R
     dy = (math.sin(my_angle) - math.sin(cup_angle)) * R
-    return dx * dx + dy * dy < (R_CUP - R_SPOUT) ** 2
+    resA = dx * dx + dy * dy < (R_CUP - R_SPOUT) ** 2
+
+    # NEW WAY!!!
+    https://en.wikipedia.org/wiki/Circular_segment
+    angle delta = 2 * arcsin(c / (2*R))
+    """
+    a = abs(my_angle - cup_angle) % TAU
+    return a < dt if a <= PI else TAU - a < dt
 
 class Bot:
     def __init__(self):
@@ -183,6 +197,22 @@ def distance(state):
             total += amount - cup[ingredient] if ingredient in cup else amount
     return total
 
+class BotList:
+    """ An ordered list that uses a heap to maintain order """
+    def __init__(self, key):
+        self.key = key
+        self.heap = [tuple([1e9, Bot()])]
+
+    def __iter__(self):
+        while bool(self.heap[0][0]): # iff the distance is 0, we are done!
+            yield self.pop()
+
+    def pop(self):
+        return heapq.heappop(self.heap)[1]
+
+    def insert(self, bot):
+        heapq.heappush(self.heap, tuple([self.key(bot), bot]))
+
 """
 # Planning algorithm
 - Iterate through all possible sets of actions (if a fn returns false, don't add to state set)
@@ -193,20 +223,19 @@ def distance(state):
 - if an ingretient is ever more than the desired result, don't presue further
 """
 if __name__ == "__main__":
-    current = [Bot()]
-    while not current[0].is_good(True):
-        state = current.pop(0)
+    queue = BotList(key=distance)
+    for state in queue:
+        # print("State", state)
         for fns in powerset(actions):
             clone = state.clone()  # clone state
             if not clone.perform(fns):  # determine if actions are possible
                 continue
             # TODO: if clone.is_good(True): return clone
-            current.append(clone)  # Add state to the current set to be evaluated
-        current = sorted(current, key=distance)
+            queue.insert(clone)
 
     # State is found
     answer = []
-    state = current.pop(0)
+    state = queue.pop()
     while state.parent:
         answer.append(tuple([state.actions, state]))
         state = state.parent
