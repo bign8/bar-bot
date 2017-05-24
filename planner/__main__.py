@@ -3,6 +3,7 @@ Drink Units: fluid ounces
 """
 
 import math
+import copy
 from functools import partial
 from itertools import chain, combinations
 
@@ -31,54 +32,99 @@ cups = {i : i * TAU / N_cups for i in range(N_cups)}
 goal = {i : {"gin": 2, "tonic": 13, "lime_juice": 1} for i in range(N_cups)}
 
 # Adding all possible actions to the mix
-actions = ["tick()"]
-actions += ["pour(%s)".format(s) for s in spouts]
-actions += ["stop(%s)".format(s) for s in spouts]
+actions = ["turn()"]
+actions += ["pour({})".format(s) for s in spouts]
+actions += ["stop({})".format(s) for s in spouts]
 
 class Bot:
     def __init__(self):
-        self.spouts = spouts # angle offset for each spout
-        self.spouts_state = {key: False for key in self.spouts} # bool for each spout (is_pouring)
-
-        self.cups = cups # angle offset for each cup
-        self.cups_state = {key: {} for key in self.cups} # map of the various ingredient levels
-
+        self.spouts_state = {key: False for key in spouts} # bool for each spout (is_pouring)
+        self.cups_state = {key: {} for key in cups} # map of the various ingredient levels
         self.link = {} # map of spout -> cup
-
-        # Keeping track of the actions
         self.time = 0
         self.angle = 0
+
+        # Ignore when cloning
         self.slice = {} # actions performed in this time slice
-        self.actions = [self.tick]
-        self.actions += [partial(self.pour, key) for key in self.spouts]
-        self.actions += [partial(self.stop, key) for key in self.spouts]
+
+    def __repr__(self):
+        return "Bot(time: {}, angle: {}, spouts: {}, cups: {}, links: {})".format(self.time, self.angle, self.spouts_state, self.cups_state, self.link)
+
+    # def perform(self, fns):
+    #     """ Perform a set of actions on a given state """
+    #     child = Bot()
+    #     child.spouts_state = copy.deepcopy(self.spouts_state)
+    #     child.cups_state = copy.deepcopy(self.cups_state)
+    #     child.link = copy.deepcopy(self.link)
+    #     child.time = self.time
+    #     child.angle = self.angle
+    #
+    #     # Apply given actions to a state
+    #     for fn in fns:
+    #         if not getattr(child, fn[:4])(fn[5:-1]):
+    #             return
+    #
+    #     return child.tock()
+
+    def is_good(self, is_done=False):
+        missed = False
+        for cup_id, recipe in goal.iteritems():
+            my_cup = self.cups_state[cup_id]
+            for ingredient, amount in recipe.iteritems():
+                if ingredient not in my_cup:
+                    missed = True
+                    continue
+                if my_cup[ingredient] > amount:
+                    return False
+                if is_done and my_cup[ingredient] < amount:
+                    return False
+        if is_done:
+            return not missed
+        return True
+
+    def apply(self, fn):
+        """ Only works for 4 letter function names and with arguments wrapped in parens """
+        return getattr(self, fn[:4])(fn[5:-1])
+
+    def clone(self):
+        bot = Bot()
+        bot.spouts_state = copy.deepcopy(self.spouts_state)
+        bot.cups_state = copy.deepcopy(self.cups_state)
+        bot.link = copy.deepcopy(self.link)
+        bot.time = self.time
+        bot.angle = self.angle
+        return bot
 
     def tock(self):
         """ The passage of time """
-        if "tick()" in self.slice:
+        self.time += 1
+        if "turn()" in self.slice:
             self.angle += TAU / 6 # making things easy
 
-        for ingredient, cup_id in self.link:
+        for ingredient, cup_id in self.link.iteritems():
             cup = self.cups_state[cup_id]
             if ingredient in cup:
                 cup[ingredient] += 0.5
             else:
                 cup[ingredient] = 0.5
 
-    def tick(self):
+        return self.is_good()
+
+    def turn(self, _):
         """
         The planes are shifted with stepper motors.
         While the global design allows both planes to move independently,
           the only thing the planner needs are the angles relative to each other.
         """
         # check precondition (haven't already called this method)
-        if "tick()" in self.slice:
+        if "turn()" in self.slice:
             return False
 
-        # TODO: check precondition (pouring spouts will be over cups)
+        # TODO(in state validation): check precondition (pouring spouts will be over cups)
 
         # apply actions
-        self.slice["tick()"] = True
+        self.slice["turn()"] = True
+        return True
 
     def pour(self, ingredient):
         """ Start pouring an ingredient """
@@ -103,7 +149,7 @@ class Bot:
         dx, dy, dr = (cos(a1) - cos(a2)) * r, (sin(a1) - sin(a2)) * r, r2 - r1
         p = dx * dx + dy * dy < dr * dr
         """
-        my_angle = self.angle + self.spouts[ingredient]
+        my_angle = self.angle + spouts[ingredient]
         my_x, my_y = math.cos(my_angle), math.sin(my_angle)
         dr = R_CUP - R_SPOUT
 
@@ -113,7 +159,7 @@ class Bot:
             return dx * dx + dy * dy < dr * dr
 
         my_cup = None
-        for cup_id, cup_angle in self.cups.iteritems():
+        for cup_id, cup_angle in cups.iteritems():
             if intersect(cup_angle):
                 my_cup = cup_id
                 break
@@ -133,7 +179,7 @@ class Bot:
         if not self.spouts_state[ingredient]:
             return False
 
-        # check precondition (we have not just started doing this action)
+        # TODO: move to state validation - check precondition (we have not just started doing this action)
         if "pour(%s)".format(ingredient) in self.slice:
             return False
 
@@ -143,6 +189,15 @@ class Bot:
         self.slice["stop(%s)".format(ingredient)] = True
         return True
 
+def distance(state):
+    """ How many drink units are we from our goal? """
+    total = 0
+    for cup_id, recipe in goal.iteritems():
+        cup = state.cups_state[cup_id]
+        for ingredient, amount in recipe.iteritems():
+            total += amount - cup[ingredient] if ingredient in cup else amount
+    return total
+
 """
 # Planning algorithm
 - Iterate through all possible sets of actions (if a fn returns false, don't add to state set)
@@ -150,27 +205,42 @@ class Bot:
 - repeat until goal state is reached
 
 ## branch limiting
-- if an ingreatient is ever more than the desired result, don't presue further
+- if an ingretient is ever more than the desired result, don't presue further
 """
 if __name__ == "__main__":
     bot = Bot()
-
-    # # Testing actions
-    # print(self.actions[1]()) # start pouring 1
-    # print(self.actions[4]()) # stop pouring 1
 
     # perform planning
     current = [bot]
     future = []
 
-    for state in current:
-        for fns in powerset(range(len(state.actions))):
-            # determine if actions are possible (continue if not)
-            # apply actions to state
-            # check if new state exceedes conditions (continue if so)
-            # check if new state meets condiitons (return plan if so)
-            # add state to future
-            pass
+    while not current[0].is_good(True):
+        state = current.pop()
+        # print("The State", str(state))
+        for fns in powerset(actions):
+            if len(fns) is 0:
+                continue
 
-    print("cups:", cups)
-    print("goal:", goal)
+            # clone state
+            clone = state.clone()
+
+            # deterimin if actions are possible
+            good = True
+            for fn in fns:
+                good = good and clone.apply(fn)
+            good = good and clone.tock()
+            if not good:  # bad state
+                continue
+
+            # if we are done, return
+            if clone.is_good(True):
+                print("TODO: return full state to get here", clone)
+                import sys
+                sys.exit(0)
+
+            # otherwise add state to frontier
+            current.append(clone)
+        current = sorted(current, key=distance, reverse=True)
+
+    # print("cups:", cups)
+    # print("goal:", goal)
