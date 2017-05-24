@@ -3,8 +3,6 @@ Drink Units: fluid ounces
 """
 
 import math
-import copy
-from functools import partial
 from itertools import chain, combinations
 
 # http://stackoverflow.com/a/1482316/3220865
@@ -19,7 +17,7 @@ R = 25 / 2 # 25" in diameter
 R_SPOUT = 0.25 / 2
 R_CUP = 4 / 2
 N_cups = 1
-DR = TAU / 6 # making things easy
+DR = TAU / (3 * 8) # making things easy
 
 # TODO: parse all this from environment
 spouts = {
@@ -100,9 +98,9 @@ class Bot:
 
     def clone(self):
         bot = Bot()
-        bot.spouts_state = copy.deepcopy(self.spouts_state)
-        bot.cups_state = copy.deepcopy(self.cups_state)
-        bot.link = copy.deepcopy(self.link)
+        bot.cups_state = {key: value.copy() for key, value in self.cups_state.iteritems()}
+        bot.spouts_state = self.spouts_state.copy()
+        bot.link = self.link.copy()
         bot.angle = self.angle
         bot.parent = self
         return bot
