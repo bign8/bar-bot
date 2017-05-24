@@ -19,6 +19,7 @@ R = 25 / 2 # 25" in diameter
 R_SPOUT = 0.25 / 2
 R_CUP = 4 / 2
 N_cups = 1
+DR = TAU / 6 # making things easy
 
 # TODO: parse all this from environment
 spouts = {
@@ -35,6 +36,12 @@ goal = {i : {"gin": 2, "tonic": 13, "lime_juice": 1} for i in range(N_cups)}
 actions = ["turn()"]
 actions += ["pour({})".format(s) for s in spouts]
 actions += ["stop({})".format(s) for s in spouts]
+
+def intersect(my_angle, cup_angle):
+    """ Does my robots angle intersect wiht my cup! """
+    dx = (math.cos(my_angle) - math.cos(cup_angle)) * R
+    dy = (math.sin(my_angle) - math.sin(cup_angle)) * R
+    return dx * dx + dy * dy < (R_CUP - R_SPOUT) ** 2
 
 class Bot:
     def __init__(self):
@@ -94,7 +101,12 @@ class Bot:
         """ The passage of time """
         self.time += 1
         if "turn()" in self.slice:
-            self.angle += TAU / 6 # making things easy
+            self.angle += DR
+
+            # Post-condition: assert we are still pouring into cups
+            for spout, cup_id in self.link.iteritems():
+                if not intersect(self.angle, cups[cup_id]):
+                    return False
 
         for ingredient, cup_id in self.link.iteritems():
             cup = self.cups_state[cup_id]
@@ -127,7 +139,7 @@ class Bot:
         if ingredient in self.spouts_state and self.spouts_state[ingredient]:
             return False
 
-        # check precondition (we have not just stopped pouring in this slice)
+        # TODO(in state validation): check precondition (we have not just stopped pouring in this slice)
         if "stop({})".format(ingredient) in self.slice:
             return False
 
@@ -145,17 +157,9 @@ class Bot:
         p = dx * dx + dy * dy < dr * dr
         """
         my_angle = self.angle + spouts[ingredient]
-        my_x, my_y = math.cos(my_angle), math.sin(my_angle)
-        dr = R_CUP - R_SPOUT
-
-        def intersect(cup_angle):
-            dx = (my_x - math.cos(cup_angle)) * R
-            dy = (my_y - math.sin(cup_angle)) * R
-            return dx * dx + dy * dy < dr * dr
-
         my_cup = None
         for cup_id, cup_angle in cups.iteritems():
-            if intersect(cup_angle):
+            if intersect(my_angle, cup_angle):
                 my_cup = cup_id
                 break
         if my_cup is None:
@@ -213,9 +217,6 @@ if __name__ == "__main__":
         state = current.pop(0)
         # print("The State", str(state))
         for fns in powerset(actions):
-            if len(fns) is 0:
-                # Power set includes no actions, ignore this
-                continue
 
             # clone state
             clone = state.clone()
