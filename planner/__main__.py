@@ -38,7 +38,20 @@ actions += ["pour({})".format(s) for s in spouts]
 actions += ["stop({})".format(s) for s in spouts]
 
 def intersect(my_angle, cup_angle):
-    """ Does my robots angle intersect wiht my cup! """
+    """
+    Does my robots angle intersect wiht my cup!
+
+    1 = spout; 2 = cup
+    a = angle; r = radius (no suffix = bot radius)
+    p = pourable (spout is over cup)
+
+    p = (x2 - x1) ** 2 + (y2 - y1) ** 2 < (r2 - r1) ** 2
+    x2 = cos(a2) * r; x1 = cos(a1) * r
+    (x2 - x1) = (cos(a2) - cos(a1)) * r
+
+    dx, dy, dr = (cos(a1) - cos(a2)) * r, (sin(a1) - sin(a2)) * r, r2 - r1
+    p = dx * dx + dy * dy < dr * dr
+    """
     dx = (math.cos(my_angle) - math.cos(cup_angle)) * R
     dy = (math.sin(my_angle) - math.sin(cup_angle)) * R
     return dx * dx + dy * dy < (R_CUP - R_SPOUT) ** 2
@@ -48,14 +61,13 @@ class Bot:
         self.spouts_state = {key: False for key in spouts} # bool for each spout (is_pouring)
         self.cups_state = {key: {} for key in cups} # map of the various ingredient levels
         self.link = {} # map of spout -> cup
-        self.time = 0
         self.angle = 0
         self.parent = None
         self.actions = None # Ignore when cloning, set by perform
 
     def __repr__(self):
-        return "Bot(time: {}, angle: {}, spouts: {}, cups: {}, links: {})".format(
-            self.time, self.angle, self.spouts_state, self.cups_state, self.link)
+        return "Bot(angle: {}, spouts: {}, cups: {}, links: {})".format(
+            self.angle, self.spouts_state, self.cups_state, self.link)
 
     def perform(self, fns):
         """ Perform a set of actions on a given state """
@@ -91,14 +103,12 @@ class Bot:
         bot.spouts_state = copy.deepcopy(self.spouts_state)
         bot.cups_state = copy.deepcopy(self.cups_state)
         bot.link = copy.deepcopy(self.link)
-        bot.time = self.time
         bot.angle = self.angle
         bot.parent = self
         return bot
 
     def tock(self):
         """ The passage of time """
-        self.time += 1
         if "turn()" in self.actions:
             self.angle += DR
 
@@ -136,18 +146,6 @@ class Bot:
             return False
 
         # check precondition (spout is over cup)
-        """
-        1 = spout; 2 = cup
-        a = angle; r = radius (no suffix = bot radius)
-        p = pourable (spout is over cup)
-
-        p = (x2 - x1) ** 2 + (y2 - y1) ** 2 < (r2 - r1) ** 2
-        x2 = cos(a2) * r; x1 = cos(a1) * r
-        (x2 - x1) = (cos(a2) - cos(a1)) * r
-
-        dx, dy, dr = (cos(a1) - cos(a2)) * r, (sin(a1) - sin(a2)) * r, r2 - r1
-        p = dx * dx + dy * dy < dr * dr
-        """
         my_angle = self.angle + spouts[ingredient]
         my_cup = None
         for cup_id, cup_angle in cups.iteritems():
@@ -200,21 +198,12 @@ if __name__ == "__main__":
     current = [Bot()]
     while not current[0].is_good(True):
         state = current.pop(0)
-        # print("The State", str(state))
         for fns in powerset(actions):
-
-            # clone state
-            clone = state.clone()
-
-            # determine if actions are possible
-            if not clone.perform(fns):  # bad state
+            clone = state.clone()  # clone state
+            if not clone.perform(fns):  # determine if actions are possible
                 continue
-
             # TODO: if clone.is_good(True): return clone
-
-            # Add state to the current set to be evaluated
-            current.append(clone)
-
+            current.append(clone)  # Add state to the current set to be evaluated
         current = sorted(current, key=distance)
 
     # State is found
