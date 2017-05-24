@@ -69,9 +69,9 @@ def intersect(my_angle, cup_angle):
     return a < dt if a <= PI else TAU - a < dt
 
 class Bot:
-    def __init__(self):
-        self.spouts_state = {key: False for key in spouts} # bool for each spout (is_pouring)
-        self.cups_state = {key: {} for key in cups} # map of the various ingredient levels
+    def __init__(self, ss=None, cs=None):
+        self.spouts_state = ss if ss else {key: False for key in spouts} # bool for each spout (is_pouring)
+        self.cups_state = cs if cs else {key: {} for key in cups} # map of the various ingredient levels
         self.link = {} # map of spout -> cup
         self.angle = 0
         self.parent = None
@@ -111,9 +111,10 @@ class Bot:
         return True
 
     def clone(self):
-        bot = Bot()
-        bot.cups_state = {key: value.copy() for key, value in self.cups_state.iteritems()}
-        bot.spouts_state = self.spouts_state.copy()
+        bot = Bot(
+            ss=self.spouts_state.copy(),
+            cs={key: value.copy() for key, value in self.cups_state.iteritems()},
+        )
         bot.link = self.link.copy()
         bot.angle = self.angle
         bot.parent = self
@@ -154,12 +155,14 @@ class Bot:
             return False
 
         # check precondition (we have not just stopped pouring in this slice)
-        if "stop({})".format(ingredient) in self.actions:
+        if "stop(" + ingredient + ")" in self.actions:
             return False
 
         # check precondition (spout is over cup)
         my_angle = self.angle + spouts[ingredient]
         my_cup = None
+
+        # TODO: keep a list of the next cups, only scan them
         for cup_id, cup_angle in cups.iteritems():
             if intersect(my_angle, cup_angle):
                 my_cup = cup_id
@@ -180,7 +183,7 @@ class Bot:
             return False
 
         # check precondition (we have not just started doing this action)
-        if "pour({})".format(ingredient) in self.actions:
+        if "pour(" + ingredient + ")" in self.actions:
             return False
 
         # apply action (stop pouring)
