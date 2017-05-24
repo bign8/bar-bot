@@ -51,9 +51,7 @@ class Bot:
         self.time = 0
         self.angle = 0
         self.parent = None
-
-        # Ignore when cloning
-        self.slice = {} # actions performed in this time slice
+        self.actions = None # Ignore when cloning, set by perform
 
     def __repr__(self):
         return "Bot(time: {}, angle: {}, spouts: {}, cups: {}, links: {})".format(
@@ -61,10 +59,15 @@ class Bot:
 
     def perform(self, fns):
         """ Perform a set of actions on a given state """
+        self.actions = fns
         for fn in fns:
             if not self.apply(fn):
                 return
         return self.tock()
+
+    def apply(self, fn):
+        """ Only works for 4 letter function names and with arguments wrapped in parens """
+        return getattr(self, fn[:4])(fn[5:-1])
 
     def is_good(self, is_done=False):
         """ Are we in a good state (ingriedients less than or equal to the desired amounts) """
@@ -83,10 +86,6 @@ class Bot:
             return not missed
         return True
 
-    def apply(self, fn):
-        """ Only works for 4 letter function names and with arguments wrapped in parens """
-        return getattr(self, fn[:4])(fn[5:-1])
-
     def clone(self):
         bot = Bot()
         bot.spouts_state = copy.deepcopy(self.spouts_state)
@@ -100,10 +99,10 @@ class Bot:
     def tock(self):
         """ The passage of time """
         self.time += 1
-        if "turn()" in self.slice:
+        if "turn()" in self.actions:
             self.angle += DR
 
-            # Post-condition: assert we are still pouring into cups
+            # check postcondition (assert we are still pouring into cups)
             for spout, cup_id in self.link.iteritems():
                 if not intersect(self.angle, cups[cup_id]):
                     return False
@@ -123,14 +122,7 @@ class Bot:
         While the global design allows both planes to move independently,
           the only thing the planner needs are the angles relative to each other.
         """
-        # check precondition (haven't already called this method)
-        if "turn()" in self.slice:
-            return False
-
         # TODO(in state validation): check precondition (pouring spouts will be over cups)
-
-        # apply actions
-        self.slice["turn()"] = True
         return True
 
     def pour(self, ingredient):
@@ -139,8 +131,8 @@ class Bot:
         if ingredient in self.spouts_state and self.spouts_state[ingredient]:
             return False
 
-        # TODO(in state validation): check precondition (we have not just stopped pouring in this slice)
-        if "stop({})".format(ingredient) in self.slice:
+        # check precondition (we have not just stopped pouring in this slice)
+        if "stop({})".format(ingredient) in self.actions:
             return False
 
         # check precondition (spout is over cup)
@@ -168,7 +160,6 @@ class Bot:
         # apply actions
         self.spouts_state[ingredient] = True
         self.link[ingredient] = my_cup
-        self.slice["pour({})".format(ingredient)] = True
         return True
 
     def stop(self, ingredient):
@@ -178,14 +169,13 @@ class Bot:
         if not self.spouts_state[ingredient]:
             return False
 
-        # TODO: move to state validation - check precondition (we have not just started doing this action)
-        if "pour({})".format(ingredient) in self.slice:
+        # check precondition (we have not just started doing this action)
+        if "pour({})".format(ingredient) in self.actions:
             return False
 
         # apply action (stop pouring)
         self.spouts_state[ingredient] = False
         del self.link[ingredient]
-        self.slice["stop({})".format(ingredient)] = True
         return True
 
 def distance(state):
@@ -207,12 +197,7 @@ def distance(state):
 - if an ingretient is ever more than the desired result, don't presue further
 """
 if __name__ == "__main__":
-    bot = Bot()
-
-    # perform planning
-    current = [bot]
-    future = []
-
+    current = [Bot()]
     while not current[0].is_good(True):
         state = current.pop(0)
         # print("The State", str(state))
@@ -236,9 +221,10 @@ if __name__ == "__main__":
     answer = []
     state = current.pop(0)
     while state.parent:
-        answer.append(tuple([state.slice.keys(), state]))
+        answer.append(tuple([state.actions, state]))
         state = state.parent
 
     # Reporting the plan!
     for i, step in enumerate(reversed(answer)):
         print("Step {}: {}".format(i, step))
+    print("TODO: figure out how to shut things off")
