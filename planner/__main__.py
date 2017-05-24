@@ -43,30 +43,24 @@ class Bot:
         self.link = {} # map of spout -> cup
         self.time = 0
         self.angle = 0
+        self.parent = None
 
         # Ignore when cloning
         self.slice = {} # actions performed in this time slice
 
     def __repr__(self):
-        return "Bot(time: {}, angle: {}, spouts: {}, cups: {}, links: {})".format(self.time, self.angle, self.spouts_state, self.cups_state, self.link)
+        return "Bot(time: {}, angle: {}, spouts: {}, cups: {}, links: {})".format(
+            self.time, self.angle, self.spouts_state, self.cups_state, self.link)
 
-    # def perform(self, fns):
-    #     """ Perform a set of actions on a given state """
-    #     child = Bot()
-    #     child.spouts_state = copy.deepcopy(self.spouts_state)
-    #     child.cups_state = copy.deepcopy(self.cups_state)
-    #     child.link = copy.deepcopy(self.link)
-    #     child.time = self.time
-    #     child.angle = self.angle
-    #
-    #     # Apply given actions to a state
-    #     for fn in fns:
-    #         if not getattr(child, fn[:4])(fn[5:-1]):
-    #             return
-    #
-    #     return child.tock()
+    def perform(self, fns):
+        """ Perform a set of actions on a given state """
+        for fn in fns:
+            if not self.apply(fn):
+                return
+        return self.tock()
 
     def is_good(self, is_done=False):
+        """ Are we in a good state (ingriedients less than or equal to the desired amounts) """
         missed = False
         for cup_id, recipe in goal.iteritems():
             my_cup = self.cups_state[cup_id]
@@ -93,6 +87,7 @@ class Bot:
         bot.link = copy.deepcopy(self.link)
         bot.time = self.time
         bot.angle = self.angle
+        bot.parent = self
         return bot
 
     def tock(self):
@@ -133,7 +128,7 @@ class Bot:
             return False
 
         # check precondition (we have not just stopped pouring in this slice)
-        if "stop(%s)".format(ingredient) in self.slice:
+        if "stop({})".format(ingredient) in self.slice:
             return False
 
         # check precondition (spout is over cup)
@@ -169,7 +164,7 @@ class Bot:
         # apply actions
         self.spouts_state[ingredient] = True
         self.link[ingredient] = my_cup
-        self.slice["pour(%s)".format(ingredient)] = True
+        self.slice["pour({})".format(ingredient)] = True
         return True
 
     def stop(self, ingredient):
@@ -180,13 +175,13 @@ class Bot:
             return False
 
         # TODO: move to state validation - check precondition (we have not just started doing this action)
-        if "pour(%s)".format(ingredient) in self.slice:
+        if "pour({})".format(ingredient) in self.slice:
             return False
 
         # apply action (stop pouring)
         self.spouts_state[ingredient] = False
         del self.link[ingredient]
-        self.slice["stop(%s)".format(ingredient)] = True
+        self.slice["stop({})".format(ingredient)] = True
         return True
 
 def distance(state):
@@ -215,32 +210,34 @@ if __name__ == "__main__":
     future = []
 
     while not current[0].is_good(True):
-        state = current.pop()
+        state = current.pop(0)
         # print("The State", str(state))
         for fns in powerset(actions):
             if len(fns) is 0:
+                # Power set includes no actions, ignore this
                 continue
 
             # clone state
             clone = state.clone()
 
-            # deterimin if actions are possible
-            good = True
-            for fn in fns:
-                good = good and clone.apply(fn)
-            good = good and clone.tock()
-            if not good:  # bad state
+            # determine if actions are possible
+            if not clone.perform(fns):  # bad state
                 continue
 
-            # if we are done, return
-            if clone.is_good(True):
-                print("TODO: return full state to get here", clone)
-                import sys
-                sys.exit(0)
+            # TODO: if clone.is_good(True): return clone
 
-            # otherwise add state to frontier
+            # Add state to the current set to be evaluated
             current.append(clone)
-        current = sorted(current, key=distance, reverse=True)
 
-    # print("cups:", cups)
-    # print("goal:", goal)
+        current = sorted(current, key=distance)
+
+    # State is found
+    answer = []
+    state = current.pop(0)
+    while state.parent:
+        answer.append(tuple([state.slice.keys(), state]))
+        state = state.parent
+
+    # Reporting the plan!
+    for i, step in enumerate(reversed(answer)):
+        print("Step {}: {}".format(i, step))
