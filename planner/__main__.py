@@ -65,8 +65,22 @@ def intersect(my_angle, cup_angle):
     https://en.wikipedia.org/wiki/Circular_segment
     angle delta = 2 * arcsin(c / (2*R))
     """
-    a = abs(my_angle - cup_angle) % TAU
+    a = my_angle - cup_angle
+    if a < 0:
+        a = -a
+    a %= TAU
     return a < dt if a <= PI else TAU - a < dt
+
+# Precompute some intersect logic
+lookup = {} # angle -> cup_id
+my_angle = 0
+while my_angle < TAU + DR/2:
+    tmp_angle = round(my_angle, 4)
+    for cup_id, cup_angle in cups.iteritems():
+        if intersect(tmp_angle, cup_angle):
+            lookup[tmp_angle] = cup_id
+            break
+    my_angle += DR
 
 class Bot:
     def __init__(self, ss=None, cs=None):
@@ -90,8 +104,11 @@ class Bot:
         return self.tock()
 
     def apply(self, fn):
-        """ Only works for 4 letter function names and with arguments wrapped in parens """
-        return getattr(self, fn[:4])(fn[5:-1])
+        """
+        Only works for 4 letter function names and with arguments wrapped in parens
+        The following is faster than `getattr(self, fn[:4])(fn[5:-1])`
+        """
+        return {"t": self.turn, "p": self.pour, "s": self.stop}[fn[0]](fn[5:-1])
 
     def is_good(self, is_done=False):
         """ Are we in a good state (ingriedients less than or equal to the desired amounts) """
@@ -112,10 +129,10 @@ class Bot:
 
     def clone(self):
         bot = Bot(
-            ss=self.spouts_state.copy(),
-            cs={key: value.copy() for key, value in self.cups_state.iteritems()},
+            ss=dict(self.spouts_state),
+            cs={key: dict(value) for key, value in self.cups_state.iteritems()},
         )
-        bot.link = self.link.copy()
+        bot.link = dict(self.link)
         bot.angle = self.angle
         bot.parent = self
         return bot
@@ -159,14 +176,7 @@ class Bot:
             return False
 
         # check precondition (spout is over cup)
-        my_angle = self.angle + spouts[ingredient]
-        my_cup = None
-
-        # TODO: keep a list of the next cups, only scan them
-        for cup_id, cup_angle in cups.iteritems():
-            if intersect(my_angle, cup_angle):
-                my_cup = cup_id
-                break
+        my_cup = self.get_pour_cup(self.angle + spouts[ingredient])
         if my_cup is None:
             return False
 
@@ -174,6 +184,16 @@ class Bot:
         self.spouts_state[ingredient] = True
         self.link[ingredient] = my_cup
         return True
+
+    def get_pour_cup(self, my_angle):
+        """
+        original (lookup is just pre-computed)
+        for cup_id, cup_angle in cups.iteritems():
+            if intersect(my_angle, cup_angle):
+                return cup_id
+        """
+        tmp_angle = round(my_angle % TAU, 4)
+        return lookup[tmp_angle] if tmp_angle in lookup else None
 
     def stop(self, ingredient):
         """ Stop pouring an ingredient """
@@ -226,15 +246,19 @@ class BotList:
 - if an ingretient is ever more than the desired result, don't presue further
 """
 if __name__ == "__main__":
+    evals = 0
     queue = BotList(key=distance)
     for state in queue:
         # print("State", state)
         for fns in powerset(actions):
+            evals += 1
             clone = state.clone()  # clone state
             if not clone.perform(fns):  # determine if actions are possible
                 continue
             # TODO: if clone.is_good(True): return clone
             queue.insert(clone)
+
+    print("Evaluated", evals, len(queue.heap))
 
     # State is found
     answer = []
